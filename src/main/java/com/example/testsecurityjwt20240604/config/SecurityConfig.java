@@ -1,16 +1,27 @@
 package com.example.testsecurityjwt20240604.config;
 
+import com.example.testsecurityjwt20240604.jwt.LoginFilter;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
+
+    // AuthenticationManager 을 사용하기 위해 AuthenticationConfiguration 을 의존성 주입 받아오기
+    private final AuthenticationConfiguration authenticationConfiguration;
+
+
 
     // 비크립트 암호화 설정
     // 사용 이유는 회원 정보를 저장하고, 다시 검증 할때에
@@ -20,6 +31,15 @@ public class SecurityConfig {
     public BCryptPasswordEncoder bCryptPasswordEncoder() {
         return new BCryptPasswordEncoder();
     }
+
+    // AuthenticationManager Bean 등록 받기 위해 사용
+    // 해당 메서드는 AuthenticationConfiguration 타입의 데이터를 받아야 사용가능하다.
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
+        return configuration.getAuthenticationManager();
+    }
+
+
 
     // 스프링 시큐리티 관련 설정
     @Bean
@@ -46,6 +66,14 @@ public class SecurityConfig {
                         .requestMatchers("/login", "/", "/join").permitAll()
                         .requestMatchers("/admin").hasRole("ADMIN")
                         .anyRequest().authenticated());
+
+        // JWT filter 작업 등록하기
+        // LoginFilter 가 동작하기 위해 AuthenticationManager 메서드를 호출 하고
+        // AuthenticationManager 가 작동하기 위해 authenticationConfiguration 를 의존성 주입 받아와 사용하면 된다.
+        http
+                .addFilterAt(new LoginFilter(authenticationManager(authenticationConfiguration)), UsernamePasswordAuthenticationFilter.class);
+
+
 
         // 세션 설정 -> session 의 상태를 state less 상태로 바꾸기
         http
