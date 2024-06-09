@@ -9,6 +9,7 @@ import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
+// JWT 발급 관련 기능 class
 @Component
 public class JWTUtil {
 

@@ -1,5 +1,6 @@
 package com.example.testsecurityjwt20240604.config;
 
+import com.example.testsecurityjwt20240604.jwt.JWTUtil;
 import com.example.testsecurityjwt20240604.jwt.LoginFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -20,7 +21,8 @@ public class SecurityConfig {
 
     // AuthenticationManager 을 사용하기 위해 AuthenticationConfiguration 을 의존성 주입 받아오기
     private final AuthenticationConfiguration authenticationConfiguration;
-
+    // login 기능사용시 jwtUtil 기능을 사용하기 위해 주입 받기
+    private final JWTUtil jwtUtil;
 
 
     // 비크립트 암호화 설정
@@ -71,7 +73,7 @@ public class SecurityConfig {
         // LoginFilter 가 동작하기 위해 AuthenticationManager 메서드를 호출 하고
         // AuthenticationManager 가 작동하기 위해 authenticationConfiguration 를 의존성 주입 받아와 사용하면 된다.
         http
-                .addFilterAt(new LoginFilter(authenticationManager(authenticationConfiguration)), UsernamePasswordAuthenticationFilter.class);
+                .addFilterAt(new LoginFilter(authenticationManager(authenticationConfiguration), jwtUtil), UsernamePasswordAuthenticationFilter.class);
 
 
 
