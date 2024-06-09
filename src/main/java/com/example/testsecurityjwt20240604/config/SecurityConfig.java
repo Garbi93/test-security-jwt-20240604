@@ -3,6 +3,7 @@ package com.example.testsecurityjwt20240604.config;
 import com.example.testsecurityjwt20240604.jwt.JWTFilter;
 import com.example.testsecurityjwt20240604.jwt.JWTUtil;
 import com.example.testsecurityjwt20240604.jwt.LoginFilter;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -14,6 +15,10 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+
+import java.util.Collections;
 
 @Configuration
 @EnableWebSecurity
@@ -47,6 +52,25 @@ public class SecurityConfig {
     // 스프링 시큐리티 관련 설정
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        // security 에서 cors 설정
+        http
+                .cors((cors) -> cors
+                        .configurationSource(new CorsConfigurationSource() {
+                            @Override
+                            public CorsConfiguration getCorsConfiguration(HttpServletRequest request) {
+                                CorsConfiguration configuration = new CorsConfiguration();
+
+                                configuration.setAllowedOrigins(Collections.singletonList("http://localhost:3000")); // 허용 할 프론트 주소
+                                configuration.setAllowedMethods(Collections.singletonList("*")); // GET POST PUT 등 모든 http 요청 허용 하기
+                                configuration.setAllowCredentials(true); // 프론트에서 credentials 설정을 해줬다면 true 로 바꿔 주어야함
+                                configuration.setAllowedHeaders(Collections.singletonList("*")); // 허용 할 헤더 값들 모두 허용
+                                configuration.setMaxAge(3600L); // 요청에 대해 허용할 시간
+
+                                configuration.setExposedHeaders(Collections.singletonList("Authorization")); // 프론트에서 Authorization 를 넣은 헤더 요청도 허용
+
+                                return configuration;
+                            }
+                        }));
 
         // csrf disable 설정 하기
         http
