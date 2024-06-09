@@ -1,5 +1,6 @@
 package com.example.testsecurityjwt20240604.config;
 
+import com.example.testsecurityjwt20240604.jwt.JWTFilter;
 import com.example.testsecurityjwt20240604.jwt.JWTUtil;
 import com.example.testsecurityjwt20240604.jwt.LoginFilter;
 import lombok.RequiredArgsConstructor;
@@ -68,6 +69,11 @@ public class SecurityConfig {
                         .requestMatchers("/login", "/", "/join").permitAll()
                         .requestMatchers("/admin").hasRole("ADMIN")
                         .anyRequest().authenticated());
+
+
+        // LoginFilter 앞에 JWT Filter 를 넣어주기
+        http
+                .addFilterBefore(new JWTFilter(jwtUtil), LoginFilter.class);
 
         // JWT filter 작업 등록하기
         // LoginFilter 가 동작하기 위해 AuthenticationManager 메서드를 호출 하고
