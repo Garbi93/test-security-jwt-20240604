@@ -3,9 +3,11 @@ package com.example.testsecurityjwt20240604.jwt;
 import com.example.testsecurityjwt20240604.dto.CustomUserDetails;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -48,26 +50,47 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
     // 회원 검증 성공시 로직
     // 성공하면 JWT 를 발급해주면 된다.
     @Override
-    protected void successfulAuthentication(HttpServletRequest request, HttpServletResponse response, FilterChain chain, Authentication authentication){
+    protected void successfulAuthentication(HttpServletRequest request,
+                                            HttpServletResponse response,
+                                            FilterChain chain,
+                                            Authentication authentication){
 
-        CustomUserDetails customUserDetails = (CustomUserDetails) authentication.getPrincipal();
+//        CustomUserDetails customUserDetails = (CustomUserDetails) authentication.getPrincipal();
+//
+//        // 회원 이름 받아오기
+//        String username = customUserDetails.getUsername();
+//
+//        // role 값 받는 과정
+//        Collection<? extends GrantedAuthority> authorities = authentication.getAuthorities();
+//        Iterator<? extends GrantedAuthority> iterator = authorities.iterator();
+//        GrantedAuthority auth = iterator.next();
+//
+//        // role 값 받아오기
+//        String role = auth.getAuthority();
+//
+//        // username 정보과 role 값을 갖고 jwtUtil 의 createJwt 기능을 요청 (요청 할때에 만료 시간도 넣어준다.)
+//        String token = jwtUtil.createJwt(username, role, 60*60*10L);
+//
+//        // token 값을 프론트에 응답 해주기
+//        response.addHeader("Authorization", "Bearer " + token);
 
-        // 회원 이름 받아오기
-        String username = customUserDetails.getUsername();
+        // accessToken refreshToken 발급 해주기 위한 로직
+        // 유저 정보 username, role 값 받아오기
+        String username = authentication.getName();
 
-        // role 값 받는 과정
         Collection<? extends GrantedAuthority> authorities = authentication.getAuthorities();
         Iterator<? extends GrantedAuthority> iterator = authorities.iterator();
         GrantedAuthority auth = iterator.next();
-
-        // role 값 받아오기
         String role = auth.getAuthority();
 
-        // username 정보과 role 값을 갖고 jwtUtil 의 createJwt 기능을 요청 (요청 할때에 만료 시간도 넣어준다.)
-        String token = jwtUtil.createJwt(username, role, 60*60*10L);
+        // 유저로부터 받아온 username, role 값을 기준으로 토큰 생성
+        String access = jwtUtil.createJwt("access", username, role, 600000L);
+        String refresh = jwtUtil.createJwt("refresh", username, role, 86400000L);
 
-        // token 값을 프론트에 응답 해주기
-        response.addHeader("Authorization", "Bearer " + token);
+        // 토큰 발급 받은후 응답 설정
+        response.setHeader("access", access); // 헤더에 access 저장
+        response.addCookie(createCookie("refresh", refresh)); // 쿠키에 refresh 저장
+        response.setStatus(HttpStatus.OK.value()); // 상태코드 발급
     }
 
 
@@ -76,6 +99,18 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
     protected void unsuccessfulAuthentication(HttpServletRequest request, HttpServletResponse response, AuthenticationException failed) {
         // 로그인 실패시 401 응답 보내기
         response.setStatus(401);
+    }
+
+    // createCookie 메서드
+    private Cookie createCookie(String key, String value) {
+
+        Cookie cookie = new Cookie(key, value);
+        cookie.setMaxAge(24*60*60);
+        //cookie.setSecure(true);
+        //cookie.setPath("/");
+        cookie.setHttpOnly(true);
+
+        return cookie;
     }
 
 
