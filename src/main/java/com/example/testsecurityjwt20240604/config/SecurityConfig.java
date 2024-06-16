@@ -92,6 +92,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests((auth) -> auth
                         .requestMatchers("/login", "/", "/join").permitAll()
                         .requestMatchers("/admin").hasRole("ADMIN")
+                        .requestMatchers("/reissue").permitAll() // accessToken 재발급 받는 경로 모두에게 열어두기
                         .anyRequest().authenticated());
 
 
