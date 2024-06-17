@@ -68,15 +68,27 @@ public class ReissueController { // 해당 컨트롤러는 만료된 accessToken
         //make new JWT
         // refresh 토큰으로부터 받아온 username 과 role 값을 넣어서 새로운 accessToken 생성 해주기
         String newAccess = jwtUtil.createJwt("access", username, role, 600000L);
+        // refresh 토큰 rotate 시켜주기
+        String newRefresh = jwtUtil.createJwt("refresh", username, role, 86400000L);
 
         //response
         // 헤더에 새로운 accessToken 셋팅해주고
         response.setHeader("access", newAccess);
+        // rotate 된 refreshToken 을 cookie 애 담아주기
+        response.addCookie(createCookie("refresh", newRefresh)); // createCookie 는 우리가 만들어 주어야 하는 메서드
 
         // ok 200 code 리턴 해주기
         return new ResponseEntity<>(HttpStatus.OK);
     }
 
+    private Cookie createCookie(String key, String value) {
+        Cookie cookie = new Cookie(key, value);
+        cookie.setMaxAge(24 * 60 * 60);
+//        cookie.setSecure(true);
+//        cookie.setPath("/");
+        cookie.setHttpOnly(true);
 
+        return cookie;
+    }
 
 }
