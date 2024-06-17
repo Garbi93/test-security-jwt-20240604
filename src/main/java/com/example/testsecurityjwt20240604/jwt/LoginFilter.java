@@ -1,6 +1,8 @@
 package com.example.testsecurityjwt20240604.jwt;
 
 import com.example.testsecurityjwt20240604.dto.CustomUserDetails;
+import com.example.testsecurityjwt20240604.entity.RefreshEntity;
+import com.example.testsecurityjwt20240604.repository.RefreshRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
@@ -17,6 +19,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Date;
 import java.util.Iterator;
 
 // JWT 필터를 만들고 servlet 의 필터를 가로채 넣어놓기 위해 만들다
@@ -29,6 +32,9 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
 
     // JWT 관련 기능을 사용 하기 위해 주입 받기
     private final JWTUtil jwtUtil;
+
+    // refresh 토큰의 DB 관련 기능을 사용하기 위해 주입 받기
+    private final RefreshRepository refreshRepository;
 
     // JWT 회원 검증 로직
     @Override
@@ -87,11 +93,16 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
         String access = jwtUtil.createJwt("access", username, role, 600000L);
         String refresh = jwtUtil.createJwt("refresh", username, role, 86400000L);
 
+        // 생성된 refresh token 을 DB 에 저장
+        addRefreshEntity(username, refresh, 86400000L);
+
         // 토큰 발급 받은후 응답 설정
         response.setHeader("access", access); // 헤더에 access 저장
         response.addCookie(createCookie("refresh", refresh)); // 쿠키에 refresh 저장
         response.setStatus(HttpStatus.OK.value()); // 상태코드 발급
     }
+
+
 
 
     // JWT 회원 검증 실패시 로직
@@ -100,6 +111,25 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
         // 로그인 실패시 401 응답 보내기
         response.setStatus(401);
     }
+
+
+    // refreshToken 을 우리 DB 에 저장 시키는 메서드
+    private void addRefreshEntity(String username,
+                                  String refresh,
+                                  Long expiredMs) {
+        Date date = new Date(System.currentTimeMillis() + expiredMs);
+
+        RefreshEntity refreshEntity = new RefreshEntity();
+        refreshEntity.setUsername(username);
+        refreshEntity.setRefresh(refresh);
+        refreshEntity.setExpiration(date.toString());
+
+        // refresh token 을 저장 시켜주기
+        refreshRepository.save(refreshEntity);
+    }
+
+
+
 
     // createCookie 메서드
     private Cookie createCookie(String key, String value) {

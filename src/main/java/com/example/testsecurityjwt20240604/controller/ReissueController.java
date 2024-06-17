@@ -1,6 +1,8 @@
 package com.example.testsecurityjwt20240604.controller;
 
+import com.example.testsecurityjwt20240604.entity.RefreshEntity;
 import com.example.testsecurityjwt20240604.jwt.JWTUtil;
+import com.example.testsecurityjwt20240604.repository.RefreshRepository;
 import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -11,6 +13,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Date;
+
 
 @RestController
 @RequiredArgsConstructor
@@ -18,6 +22,9 @@ public class ReissueController { // 해당 컨트롤러는 만료된 accessToken
 
     // 새로운 토큰을 만들어주기 위해 jwtUtil 을 주입 받아준다.
     private final JWTUtil jwtUtil;
+
+    // rotate 시 refresh DB 를 건들이기 위해 주입 받기
+    private final RefreshRepository refreshRepository;
 
     @PostMapping("/reissue")
     public ResponseEntity<?> reissue(HttpServletRequest request,
@@ -61,6 +68,13 @@ public class ReissueController { // 해당 컨트롤러는 만료된 accessToken
             return new ResponseEntity<>("invalid refresh token", HttpStatus.BAD_REQUEST);
         }
 
+        // 받은 refresh token 값이 DB 안에 있는지 확인
+        Boolean isExist = refreshRepository.existsByRefresh(refresh);
+        if (!isExist) {
+            // DB 에 없다면?
+            return new ResponseEntity<>("invalid refresh token", HttpStatus.BAD_REQUEST);
+        }
+
         // 모든 검증이 완료된후 username과 role 값을 refresh 토큰으로 부터 받아오기
         String username = jwtUtil.getUsername(refresh);
         String role = jwtUtil.getRole(refresh);
@@ -71,6 +85,11 @@ public class ReissueController { // 해당 컨트롤러는 만료된 accessToken
         // refresh 토큰 rotate 시켜주기
         String newRefresh = jwtUtil.createJwt("refresh", username, role, 86400000L);
 
+        // refresh 토큰을 재 발급 받았다면 기존 refresh 토큰은 DB 에서 삭제 후 newRefresh 를 DB 에 저장
+        refreshRepository.deleteByRefresh(refresh);
+        addRefreshEntity(username, newRefresh, 86400000L); // 해당 메서드는 우리가 만들어주기
+
+
         //response
         // 헤더에 새로운 accessToken 셋팅해주고
         response.setHeader("access", newAccess);
@@ -79,6 +98,21 @@ public class ReissueController { // 해당 컨트롤러는 만료된 accessToken
 
         // ok 200 code 리턴 해주기
         return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    // 우리가 만들어준 addRefreshEntity
+    private void addRefreshEntity(String username,
+                                  String refresh,
+                                  Long expiredMs) {
+        Date date = new Date(System.currentTimeMillis() + expiredMs);
+
+        RefreshEntity refreshEntity = new RefreshEntity();
+        refreshEntity.setUsername(username);
+        refreshEntity.setRefresh(refresh);
+        refreshEntity.setExpiration(date.toString());
+
+        // newRefresh 토큰 저장 해주기
+        refreshRepository.save(refreshEntity);
     }
 
     private Cookie createCookie(String key, String value) {
