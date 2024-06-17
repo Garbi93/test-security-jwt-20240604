@@ -1,5 +1,6 @@
 package com.example.testsecurityjwt20240604.config;
 
+import com.example.testsecurityjwt20240604.jwt.CustomLogoutFilter;
 import com.example.testsecurityjwt20240604.jwt.JWTFilter;
 import com.example.testsecurityjwt20240604.jwt.JWTUtil;
 import com.example.testsecurityjwt20240604.jwt.LoginFilter;
@@ -16,6 +17,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.authentication.logout.LogoutFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 
@@ -109,6 +111,9 @@ public class SecurityConfig {
         http
                 .addFilterAt(new LoginFilter(authenticationManager(authenticationConfiguration), jwtUtil, refreshRepository), UsernamePasswordAuthenticationFilter.class);
 
+        // LogoutFilter 등록하기
+        http
+                .addFilterBefore(new CustomLogoutFilter(jwtUtil, refreshRepository), LogoutFilter.class);
 
 
         // 세션 설정 -> session 의 상태를 state less 상태로 바꾸기
